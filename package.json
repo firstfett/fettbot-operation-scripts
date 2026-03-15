@@ -1,0 +1,12 @@
+{
+  "name": "fettbot-operation-scripts",
+  "version": "1.0.0",
+  "description": "Deterministic scripts for agent operations",
+  "scripts": {
+    "lint": "eslint scripts/",
+    "test": "node ci/test.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}
