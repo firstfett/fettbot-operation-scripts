@@ -18,8 +18,14 @@ if (!owner || !repo || !pr) {
   process.exit(1);
 }
 
-const tokenLine = fs.readFileSync(tokenFile, 'utf8').trim();
-const token = tokenLine.includes('=') ? tokenLine.split('=')[1] : tokenLine;
+let token;
+try {
+  const tokenLine = fs.readFileSync(tokenFile, 'utf8').trim();
+  token = tokenLine.includes('=') ? tokenLine.split('=')[1] : tokenLine;
+} catch (e) {
+  console.error(JSON.stringify({ error: 'Cannot read token file: ' + e.message }));
+  process.exit(1);
+}
 
 const req = https.request({
   hostname: 'api.github.com',
@@ -34,18 +40,23 @@ const req = https.request({
   let body = '';
   res.on('data', chunk => body += chunk);
   res.on('end', () => {
-    if (res.statusCode === 200) {
-      const r = JSON.parse(body);
-      console.log(JSON.stringify({
-        number: r.number,
-        title: r.title,
-        state: r.state,
-        mergeable: r.mergeable,
-        merged: r.merged,
-        html_url: r.html_url
-      }));
-    } else {
-      console.error(JSON.stringify({ error: body, status: res.statusCode }));
+    try {
+      if (res.statusCode === 200) {
+        const r = JSON.parse(body);
+        console.log(JSON.stringify({
+          number: r.number,
+          title: r.title,
+          state: r.state,
+          mergeable: r.mergeable,
+          merged: r.merged,
+          html_url: r.html_url
+        }));
+      } else {
+        console.error(JSON.stringify({ error: body, status: res.statusCode }));
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error(JSON.stringify({ error: 'Parse error: ' + e.message, body: body }));
       process.exit(1);
     }
   });

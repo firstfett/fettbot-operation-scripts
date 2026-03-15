@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 const https = require('https');
 const fs = require('fs');
 
@@ -13,7 +13,7 @@ const repo = getArg('repo');
 const title = getArg('title');
 const head = getArg('head');
 const base = getArg('base') || 'main';
-const body = getArg('body') || '';
+const prBody = getArg('body') || '';
 const tokenFile = getArg('token-file') || 'C:\\Users\\Fettbot\\.openclaw\\.env.github';
 
 if (!owner || !repo || !title || !head) {
@@ -21,10 +21,16 @@ if (!owner || !repo || !title || !head) {
   process.exit(1);
 }
 
-const tokenLine = fs.readFileSync(tokenFile, 'utf8').trim();
-const token = tokenLine.includes('=') ? tokenLine.split('=')[1] : tokenLine;
+let token;
+try {
+  const tokenLine = fs.readFileSync(tokenFile, 'utf8').trim();
+  token = tokenLine.includes('=') ? tokenLine.split('=')[1] : tokenLine;
+} catch (e) {
+  console.error(JSON.stringify({ error: 'Cannot read token file: ' + e.message }));
+  process.exit(1);
+}
 
-const data = JSON.stringify({ title, head, base, body });
+const data = JSON.stringify({ title, head, base, body: prBody });
 
 const req = https.request({
   hostname: 'api.github.com',
@@ -41,11 +47,16 @@ const req = https.request({
   let respBody = '';
   res.on('data', chunk => respBody += chunk);
   res.on('end', () => {
-    if (res.statusCode === 201) {
-      const r = JSON.parse(respBody);
-      console.log(JSON.stringify({ success: true, number: r.number, html_url: r.html_url }));
-    } else {
-      console.error(JSON.stringify({ error: respBody, status: res.statusCode }));
+    try {
+      if (res.statusCode === 201) {
+        const r = JSON.parse(respBody);
+        console.log(JSON.stringify({ success: true, number: r.number, html_url: r.html_url }));
+      } else {
+        console.error(JSON.stringify({ error: respBody, status: res.statusCode }));
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error(JSON.stringify({ error: 'Parse error: ' + e.message, body: respBody }));
       process.exit(1);
     }
   });
